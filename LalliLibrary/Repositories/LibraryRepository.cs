@@ -10,31 +10,34 @@ namespace LalliLibrary.Repositories
     public class LibraryRepository : ILibraryRepository
     {
         private readonly LibraryContext _ctx;
-        public LibraryRepository(LibraryContext ctx) => _ctx = ctx;
+        public LibraryRepository(LibraryContext ctx)
+        {
+            _ctx = ctx;
+        }
 
         // ---------- Authors ----------
         public async Task<IEnumerable<Author>> GetAuthorsAsync()
-            => await _ctx.Authors.AsNoTracking().ToListAsync();
-
+        {
+            return await _ctx.Authors.AsNoTracking().ToListAsync();
+        }
         public async Task<Author?> GetAuthorAsync(int id)
-            => await _ctx.Authors
+        {
+            return await _ctx.Authors
                          .Include(a => a.Books)
                          .AsNoTracking()
                          .FirstOrDefaultAsync(a => a.AuthorId == id);
-
+        }
         public async Task<Author> CreateAuthorAsync(Author author)
         {
             _ctx.Authors.Add(author);
             await _ctx.SaveChangesAsync();
             return author;
         }
-
         public async Task UpdateAuthorAsync(Author author)
         {
             _ctx.Authors.Update(author);
             await _ctx.SaveChangesAsync();
         }
-
         public async Task DeleteAuthorAsync(int id)
         {
             var a = await _ctx.Authors.FindAsync(id);

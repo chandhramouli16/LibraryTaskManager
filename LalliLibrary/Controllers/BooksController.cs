@@ -11,9 +11,7 @@ namespace LalliLibrary.Controllers
         private readonly ILibraryRepository _repo;
         public BooksController(ILibraryRepository repo) => _repo = repo;
 
-        /// <summary>
         /// GET /api/books
-        /// </summary>
         [HttpGet]
         public async Task<IEnumerable<BookDto>> GetAll()
             => (await _repo.GetBooksAsync())
@@ -24,9 +22,7 @@ namespace LalliLibrary.Controllers
                     b.Author.Name
                 ));
 
-        /// <summary>
         /// GET /api/books/{id}
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<ActionResult<BookDto>> Get(int id)
         {
@@ -36,9 +32,7 @@ namespace LalliLibrary.Controllers
                 : Ok(new BookDto(b.BookId, b.Title, b.AuthorId, b.Author.Name));
         }
 
-        /// <summary>
         /// POST /api/books
-        /// </summary>
         [HttpPost]
         public async Task<ActionResult<BookDto>> Create(CreateBookDto dto)
         {
@@ -57,9 +51,7 @@ namespace LalliLibrary.Controllers
             return CreatedAtAction(nameof(Get), new { id = result.BookId }, result);
         }
 
-        /// <summary>
         /// PUT /api/books/{id}
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, CreateBookDto dto)
         {
@@ -72,9 +64,7 @@ namespace LalliLibrary.Controllers
             return NoContent();
         }
 
-        /// <summary>
         /// DELETE /api/books/{id}
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

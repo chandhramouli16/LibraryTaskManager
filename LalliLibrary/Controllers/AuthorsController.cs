@@ -11,17 +11,13 @@ namespace LalliLibrary.Controllers
         private readonly ILibraryRepository _repo;
         public AuthorsController(ILibraryRepository repo) => _repo = repo;
 
-        /// <summary>
         /// GET /api/authors
-        /// </summary>
         [HttpGet]
         public async Task<IEnumerable<AuthorDto>> GetAll()
             => (await _repo.GetAuthorsAsync())
                 .Select(a => new AuthorDto(a.AuthorId, a.Name));
 
-        /// <summary>
         /// GET /api/authors/{id}
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<ActionResult<AuthorDto>> Get(int id)
         {
@@ -31,9 +27,7 @@ namespace LalliLibrary.Controllers
                 : Ok(new AuthorDto(a.AuthorId, a.Name));
         }
 
-        /// <summary>
         /// POST /api/authors
-        /// </summary>
         [HttpPost]
         public async Task<ActionResult<AuthorDto>> Create(CreateAuthorDto dto)
         {
@@ -43,9 +37,7 @@ namespace LalliLibrary.Controllers
             return CreatedAtAction(nameof(Get), new { id = result.AuthorId }, result);
         }
 
-        /// <summary>
         /// PUT /api/authors/{id}
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, CreateAuthorDto dto)
         {
@@ -57,9 +49,7 @@ namespace LalliLibrary.Controllers
             return NoContent();
         }
 
-        /// <summary>
         /// DELETE /api/authors/{id}
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

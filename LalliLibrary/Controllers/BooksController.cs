@@ -1,51 +1,88 @@
-﻿using LalliLibrary.Data;
-using LalliLibrary.Models;
+﻿using LalliLibrary.Models;
+using LalliLibrary.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
-[ApiController]
-[Route("api/[controller]")]
-public class BooksController : ControllerBase
+namespace LalliLibrary.Controllers
 {
-    private readonly LibraryContext _ctx;
-    public BooksController(LibraryContext ctx) => _ctx = ctx;
-
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
-        => Ok(await _ctx.Books.Include(b => b.Author).ToListAsync());
-
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(int id)
+    [ApiController]
+    [Route("api/[controller]")]
+    public class BooksController : ControllerBase
     {
-        var book = await _ctx.Books.Include(b => b.Author)
-                                   .FirstOrDefaultAsync(b => b.Id == id);
-        return book is null ? NotFound() : Ok(book);
-    }
+        private readonly ILibraryRepository _repo;
+        public BooksController(ILibraryRepository repo) => _repo = repo;
 
-    [HttpPost]
-    public async Task<IActionResult> Create(Book book)
-    {
-        _ctx.Books.Add(book);
-        await _ctx.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { id = book.Id }, book);
-    }
+        /// <summary>
+        /// GET /api/books
+        /// </summary>
+        [HttpGet]
+        public async Task<IEnumerable<BookDto>> GetAll()
+            => (await _repo.GetBooksAsync())
+                .Select(b => new BookDto(
+                    b.BookId,
+                    b.Title,
+                    b.AuthorId,
+                    b.Author.Name
+                ));
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Book updated)
-    {
-        if (id != updated.Id) return BadRequest();
-        _ctx.Entry(updated).State = EntityState.Modified;
-        await _ctx.SaveChangesAsync();
-        return NoContent();
-    }
+        /// <summary>
+        /// GET /api/books/{id}
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<ActionResult<BookDto>> Get(int id)
+        {
+            var b = await _repo.GetBookAsync(id);
+            return b is null
+                ? NotFound()
+                : Ok(new BookDto(b.BookId, b.Title, b.AuthorId, b.Author.Name));
+        }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var book = await _ctx.Books.FindAsync(id);
-        if (book is null) return NotFound();
-        _ctx.Books.Remove(book);
-        await _ctx.SaveChangesAsync();
-        return NoContent();
+        /// <summary>
+        /// POST /api/books
+        /// </summary>
+        [HttpPost]
+        public async Task<ActionResult<BookDto>> Create(CreateBookDto dto)
+        {
+            var book = new Data.Entities.Book
+            {
+                Title = dto.Title,
+                AuthorId = dto.AuthorId
+            };
+            var created = await _repo.CreateBookAsync(book);
+            var result = new BookDto(
+                created.BookId,
+                created.Title,
+                created.AuthorId,
+                (await _repo.GetAuthorAsync(created.AuthorId))!.Name
+            );
+            return CreatedAtAction(nameof(Get), new { id = result.BookId }, result);
+        }
+
+        /// <summary>
+        /// PUT /api/books/{id}
+        /// </summary>
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, CreateBookDto dto)
+        {
+            var existing = await _repo.GetBookAsync(id);
+            if (existing is null) return NotFound();
+
+            existing.Title = dto.Title;
+            existing.AuthorId = dto.AuthorId;
+            await _repo.UpdateBookAsync(existing);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// DELETE /api/books/{id}
+        /// </summary>
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var existing = await _repo.GetBookAsync(id);
+            if (existing is null) return NotFound();
+
+            await _repo.DeleteBookAsync(id);
+            return NoContent();
+        }
     }
 }

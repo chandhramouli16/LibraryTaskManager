@@ -1,51 +1,73 @@
-﻿using LalliLibrary.Data;
-using LalliLibrary.Models;
+﻿using LalliLibrary.Models;
+using LalliLibrary.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
-[ApiController]
-[Route("api/[controller]")]
-public class AuthorsController : ControllerBase
+namespace LalliLibrary.Controllers
 {
-    private readonly LibraryContext _ctx;
-    public AuthorsController(LibraryContext ctx) => _ctx = ctx;
-
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
-        => Ok(await _ctx.Authors.Include(a => a.Books).ToListAsync());
-
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(int id)
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AuthorsController : ControllerBase
     {
-        var author = await _ctx.Authors.Include(a => a.Books)
-                                       .FirstOrDefaultAsync(a => a.Id == id);
-        return author is null ? NotFound() : Ok(author);
-    }
+        private readonly ILibraryRepository _repo;
+        public AuthorsController(ILibraryRepository repo) => _repo = repo;
 
-    [HttpPost]
-    public async Task<IActionResult> Create(Author author)
-    {
-        _ctx.Authors.Add(author);
-        await _ctx.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { id = author.Id }, author);
-    }
+        /// <summary>
+        /// GET /api/authors
+        /// </summary>
+        [HttpGet]
+        public async Task<IEnumerable<AuthorDto>> GetAll()
+            => (await _repo.GetAuthorsAsync())
+                .Select(a => new AuthorDto(a.AuthorId, a.Name));
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Author updated)
-    {
-        if (id != updated.Id) return BadRequest();
-        _ctx.Entry(updated).State = EntityState.Modified;
-        await _ctx.SaveChangesAsync();
-        return NoContent();
-    }
+        /// <summary>
+        /// GET /api/authors/{id}
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<ActionResult<AuthorDto>> Get(int id)
+        {
+            var a = await _repo.GetAuthorAsync(id);
+            return a is null
+                ? NotFound()
+                : Ok(new AuthorDto(a.AuthorId, a.Name));
+        }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var author = await _ctx.Authors.FindAsync(id);
-        if (author is null) return NotFound();
-        _ctx.Authors.Remove(author);
-        await _ctx.SaveChangesAsync();
-        return NoContent();
+        /// <summary>
+        /// POST /api/authors
+        /// </summary>
+        [HttpPost]
+        public async Task<ActionResult<AuthorDto>> Create(CreateAuthorDto dto)
+        {
+            var author = new Data.Entities.Author { Name = dto.Name };
+            var created = await _repo.CreateAuthorAsync(author);
+            var result = new AuthorDto(created.AuthorId, created.Name);
+            return CreatedAtAction(nameof(Get), new { id = result.AuthorId }, result);
+        }
+
+        /// <summary>
+        /// PUT /api/authors/{id}
+        /// </summary>
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, CreateAuthorDto dto)
+        {
+            var existing = await _repo.GetAuthorAsync(id);
+            if (existing is null) return NotFound();
+
+            existing.Name = dto.Name;
+            await _repo.UpdateAuthorAsync(existing);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// DELETE /api/authors/{id}
+        /// </summary>
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var existing = await _repo.GetAuthorAsync(id);
+            if (existing is null) return NotFound();
+
+            await _repo.DeleteAuthorAsync(id);
+            return NoContent();
+        }
     }
 }
